@@ -219,7 +219,59 @@ object GoogleVsApple {
   val google = List("android", "Android", "galaxy", "Galaxy", "nexus", "Nexus")
   val apple = List("ios", "iOS", "iphone", "iPhone", "ipad", "iPad")
 
-  def search(words: List[String], ts: TweetSet): TweetSet = {
+  def search(words: List[String], ts: TweetSet): TweetSet = searchInner(words, ts)
+
+  /*
+   * Search using explicit iterators. By returning, the search in a tweet can
+   * be aborted once a match is found.
+   */
+  def searchInner(words: List[String], ts: TweetSet): TweetSet = {
+    def searchTweet(tweet: Tweet): Boolean = {
+      val textParts = tweet.text.split(" ")
+      val textPartsIter = textParts.iterator
+      while (textPartsIter.hasNext) {
+        val textPart = textPartsIter.next
+        val wordsIter = words.iterator
+        while (wordsIter.hasNext) {
+          val word = wordsIter.next
+          if (word == textPart) {
+            return true
+          }
+        }
+      }
+      false
+    }
+    ts.filter(searchTweet)
+  }
+
+  /*
+   * *Incorrect* implementation of search using iterators. The result is
+   * always false.
+   */
+  def searchAnon(words: List[String], ts: TweetSet): TweetSet = {
+    ts.filter((tweet: Tweet) => {
+      val textParts = tweet.text.split(" ")
+      val textPartsIter = textParts.iterator
+      while (textPartsIter.hasNext) {
+        val textPart = textPartsIter.next
+        val wordsIter = words.iterator
+        while (wordsIter.hasNext) {
+          val word = wordsIter.next
+          if (word == textPart) {
+            true
+          }
+        }
+      }
+      false
+    })
+  }
+
+  /*
+   * search implementation using foldLeft.
+   * This implementation is not optimal since it does not stop searching 
+   * even if a match has been found
+   */
+  def searchFold(words: List[String], ts: TweetSet): TweetSet = {
     ts.filter((tweet: Tweet) => {
       val textParts = tweet.text.split(" ")
       textParts.foldLeft(false)((found, textPart) => {
