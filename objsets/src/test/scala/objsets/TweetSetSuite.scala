@@ -10,9 +10,9 @@ class TweetSetSuite extends FunSuite {
   trait TestSets {
     val set1 = new Empty
     val set2 = set1.incl(new Tweet("a", "a body", 20))
-    val set3 = set2.incl(new Tweet("b", "b body", 20))
+    val set3 = set2.incl(new Tweet("b", "b body", 12))
     val c = new Tweet("c", "c body", 7)
-    val d = new Tweet("d", "d body", 9)
+    val d = new Tweet("d", "d body", 24)
     val set4c = set3.incl(c)
     val set4d = set3.incl(d)
     val set5 = set4c.incl(d)
@@ -40,7 +40,7 @@ class TweetSetSuite extends FunSuite {
 
   test("filter: 20 on set5") {
     new TestSets {
-      assert(size(set5.filter(tw => tw.retweets == 20)) === 2)
+      assert(size(set5.filter(tw => tw.retweets >= 20)) === 2)
     }
   }
 
@@ -62,11 +62,38 @@ class TweetSetSuite extends FunSuite {
     }
   }
 
-  test("descending: set5") {
+  test("mostRetweeted") {
     new TestSets {
-      val trends = set5.descendingByRetweet
-      assert(!trends.isEmpty)
-      assert(trends.head.user == "a" || trends.head.user == "b")
+      assert(set3.mostRetweeted.retweets == 12
+        && set3.mostRetweeted.user == "b")
+      assert(set5.mostRetweeted.retweets == 7
+        && set5.mostRetweeted.user == "c")
     }
   }
+
+  test("descending: set5") {
+    new TestSets {
+      var trends = set5.descendingByRetweet
+      assert(!trends.isEmpty)
+      assert(trends.head.user == "d")
+      trends = trends.tail
+      assert(trends.head.user == "a")
+      trends = trends.tail
+      assert(trends.head.user == "b")
+      trends = trends.tail
+      assert(trends.head.user == "c")
+    }
+  }
+
+  test("search") {
+    new TestSets {
+      val bodySet = GoogleVsApple.search(List("body"), set5)
+      assert(size(bodySet) == 4)
+      val dSet = GoogleVsApple.search(List("d"), set5)
+      assert(size(dSet) == 1)
+      val unknownSet = GoogleVsApple.search(List("unknown"), set5)
+      assert(size(unknownSet) == 0)
+    }
+  }
+  
 }
