@@ -5,49 +5,9 @@ import org.scalatest.FunSuite
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 
-/**
- * This class is a test suite for the methods in object FunSets. To run
- * the test suite, you can either:
- *  - run the "test" command in the SBT console
- *  - right-click the file in eclipse and chose "Run As" - "JUnit Test"
- */
 @RunWith(classOf[JUnitRunner])
 class FunSetSuite extends FunSuite {
 
-
-  /**
-   * Link to the scaladoc - very clear and detailed tutorial of FunSuite
-   *
-   * http://doc.scalatest.org/1.9.1/index.html#org.scalatest.FunSuite
-   *
-   * Operators
-   *  - test
-   *  - ignore
-   *  - pending
-   */
-
-  /**
-   * Tests are written using the "test" operator and the "assert" method.
-   */
-  test("string take") {
-    val message = "hello, world"
-    assert(message.take(5) == "hello")
-  }
-
-  /**
-   * For ScalaTest tests, there exists a special equality operator "===" that
-   * can be used inside "assert". If the assertion fails, the two values will
-   * be printed in the error message. Otherwise, when using "==", the test
-   * error message will only say "assertion failed", without showing the values.
-   *
-   * Try it out! Change the values so that the assertion fails, and look at the
-   * error message.
-   */
-  test("adding ints") {
-    assert(1 + 2 === 3)
-  }
-
-  
   import FunSets._
 
   test("contains is implemented") {
@@ -72,11 +32,13 @@ class FunSetSuite extends FunSuite {
    * abstract classes), and create an instance inside each test method.
    * 
    */
-
   trait TestSets {
     val s1 = singletonSet(1)
     val s2 = singletonSet(2)
     val s3 = singletonSet(3)
+    val set1To99 = (x:Int) => x > 0 && x < 100
+    val set0To99 = (x:Int) => x >= 0 && x < 100
+    val set1To100 = (x:Int) => x > 0 && x <= 100
   }
 
   /**
@@ -86,7 +48,7 @@ class FunSetSuite extends FunSuite {
    * Once you finish your implementation of "singletonSet", exchange the
    * function "ignore" by "test".
    */
-  ignore("singletonSet(1) contains 1") {
+  test("singletonSet(1) contains 1") {
     
     /**
      * We create a new instance of the "TestSets" trait, this gives us access
@@ -98,15 +60,77 @@ class FunSetSuite extends FunSuite {
        * the test fails. This helps identifying which assertion failed.
        */
       assert(contains(s1, 1), "Singleton")
+      assert(contains(set1To99, 1))
+      assert(contains(set1To99, 99))
+      assert(!contains(set1To99, 0))
     }
   }
 
-  ignore("union contains all elements") {
+  test("union contains all elements") {
     new TestSets {
       val s = union(s1, s2)
       assert(contains(s, 1), "Union 1")
       assert(contains(s, 2), "Union 2")
       assert(!contains(s, 3), "Union 3")
+    }
+    new TestSets {
+      val s0To100 = union(set0To99, set1To100)
+      assert(contains(s0To100, 0))
+      assert(contains(s0To100, 100))
+      assert(!contains(s0To100, 101))
+    }
+  }
+  
+  test("intersect") {
+    new TestSets {
+      val s = intersect(s1, s2)
+      assert(!contains(s, 1))
+      assert(!contains(s, 2))
+      assert(!contains(s, 3))
+    }
+    new TestSets {
+      val s0To100 = intersect(set0To99, set1To100)
+      assert(!contains(s0To100, 0))
+      assert(!contains(s0To100, 100))
+      assert(contains(s0To100, 99))
+    }
+  }
+  
+  test("diff") {
+    new TestSets {
+      val s0 = diff(set0To99, set1To100)
+      assert(contains(s0, 0))
+      assert(!contains(s0, 100))
+      assert(!contains(s0, 1))
+    }
+  }
+  
+  test("filter") {
+    new TestSets {
+      val s0To49 = filter(set0To99, (x: Int) => x < 50)
+      assert(contains(s0To49, 0))
+      assert(!contains(s0To49, 100))
+    }
+  }
+  
+  test("forall") {
+    new TestSets {
+      assert(forall(set1To99, (x:Int) => contains(set0To99, x)))
+      assert(!forall(set1To99, (x:Int) => x == 1))
+    }
+  }
+  
+  test("exists") {
+    new TestSets {
+      assert(exists(set1To99, (x:Int) => x == 98))
+      assert(!exists(set1To99, (x:Int) => x == 0))
+    }
+  }
+  
+  test("map") {
+    new TestSets {
+      assert(map(singletonSet(2), (x: Int) => x)(2))
+      assert(map(singletonSet(3), (x: Int) => x*x)(9))
     }
   }
 }
