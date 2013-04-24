@@ -54,17 +54,47 @@ class HuffmanSuite extends FunSuite {
       List(Leaf('e', 1), Leaf('t', 2), Leaf('x', 3)))
   }
 
-  test("combine of some leaf list") {
-    val leaflist = List(Leaf('e', 1), Leaf('t', 2), Leaf('x', 4))
-    val c1 = combine(leaflist)
-    assert(c1 === List(Fork(Leaf('e', 1), Leaf('t', 2), List('e', 't'), 3), Leaf('x', 4)))
-    val c1Fork: Fork = c1.head.asInstanceOf[Fork]
-    val c2 = combine(c1)
-    assert(c2 === List(Fork(c1Fork, Leaf('x', 4), List('e', 't', 'x'), 7)))
+  test("singleton") {
+    assert(singleton(List(Leaf('1', 1))) == true)
+    assert(singleton(Nil) == false)
+    assert(singleton(List(Leaf('1', 1), Leaf('2', 2))) == false)
   }
 
-  ignore("createCodeTree test") {
-    Console.println(createCodeTree("text".toList))
+  test("combine of some leaf list") {
+    assert(combine(List()) == List())
+    assert(combine(List(Leaf('a', 1))) == List(Leaf('a', 1)))
+
+    val xLeaf = Leaf('x', 4)
+    val leaflist = List(Leaf('e', 2), Leaf('t', 3), xLeaf)
+    val c1 = combine(leaflist)
+    val etFork = Fork(Leaf('e', 2), Leaf('t', 3), List('e', 't'), 5)
+    assert(c1 === List(Leaf('x', 4), etFork))
+
+    val c2 = combine(c1)
+    assert(c2 === List(Fork(xLeaf, etFork, List('x', 'e', 't'), 9)))
+  }
+
+  test("createCodeTree test") {
+    val tree = createCodeTree("text".toList)
+    val head = tree.asInstanceOf[Fork]
+    assert(head.chars == List('e', 'x', 't'))
+    assert(head.weight == 4)
+
+    val xeTree = head.left.asInstanceOf[Fork]
+    assert(xeTree.chars == List('e', 'x'))
+    assert(xeTree.weight == 2)
+
+    val eLeaf = xeTree.left.asInstanceOf[Leaf]
+    assert(eLeaf.char == 'e')
+    assert(eLeaf.weight == 1)
+
+    val xLeaf = xeTree.right.asInstanceOf[Leaf]
+    assert(xLeaf.char == 'x')
+    assert(xLeaf.weight == 1)
+
+    val tLeaf = head.right.asInstanceOf[Leaf]
+    assert(tLeaf.char == 't')
+    assert(tLeaf.weight == 2)
   }
 
   test("decode") {
@@ -76,8 +106,8 @@ class HuffmanSuite extends FunSuite {
 
   test("encode") {
     new TestTrees {
-      assert(encode(Leaf('a', 1))(List('a', 'a')) == List(0, 0))
       assert(encode(t2)("bda".toList) == List(0, 1, 1, 0, 0))
+      assert(encode(Leaf('a', 1))(List('a', 'a')) == List(0, 0))
     }
   }
 

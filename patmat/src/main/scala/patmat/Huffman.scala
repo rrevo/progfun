@@ -14,7 +14,7 @@ object Huffman {
    * present in the leaves below it. The weight of a `Fork` node is the sum of the weights of these
    * leaves.
    */
-  abstract class CodeTree
+  abstract class CodeTree { val weight: Int }
   case class Fork(left: CodeTree, right: CodeTree, chars: List[Char], weight: Int) extends CodeTree
   case class Leaf(char: Char, weight: Int) extends CodeTree
 
@@ -86,9 +86,7 @@ object Huffman {
    * Checks whether the list `trees` contains only one single code tree.
    */
   def singleton(trees: List[CodeTree]): Boolean = {
-    if (trees.isEmpty)
-      throw new IllegalStateException("Expecting atleast one element in trees")
-    trees.tail.isEmpty
+    !trees.isEmpty && trees.tail.isEmpty
   }
 
   /**
@@ -104,14 +102,18 @@ object Huffman {
    * unchanged.
    */
   def combine(trees: List[CodeTree]): List[CodeTree] = {
-    if (singleton(trees)) {
+
+    if (trees.isEmpty) {
+      Nil
+    } else if (singleton(trees)) {
       trees
     } else {
-      val left = trees.head
-      val right = trees.tail.head
+      val first = trees.head
+      val second = trees.tail.head
       val rest = trees.tail.tail
-      val fork = Fork(left, right, chars(left) ++ chars(right), weight(left) + weight(right))
-      fork :: rest
+
+      val fork = Fork(first, second, chars(first) ++ chars(second), weight(first) + weight(second))
+      (fork :: rest).sortWith((x, y) => x.weight < y.weight)
     }
   }
 
@@ -153,35 +155,32 @@ object Huffman {
    * the resulting list of characters.
    */
   def decode(tree: CodeTree, bits: List[Bit]): List[Char] = {
-    def decodeAcc(subTree: CodeTree, bits: List[Bit], chars: List[Char]): List[Char] = {
 
-      if (bits.isEmpty) {
-        chars
-      } else {
-        val bit = bits.head
-        bit match {
-          case 0 => subTree match {
-            case Fork(Leaf(char, _), _, _, _) => decodeAcc(tree, bits.tail, char :: chars)
-            case Fork(left, _, _, _) => decodeAcc(left, bits.tail, chars)
+    def decodeAcc(subTree: CodeTree, subBits: List[Bit], chars: List[Char]): List[Char] = {
+      subTree match {
+        case Leaf(char, _) => {
+          val newChars = char :: chars
+          if (subBits.isEmpty) {
+            newChars
+          } else {
+            decodeAcc(tree, subBits, newChars)
           }
-          case 1 => subTree match {
-            case Fork(_, Leaf(char, _), _, _) => decodeAcc(tree, bits.tail, char :: chars)
-            case Fork(_, right, _, _) => decodeAcc(right, bits.tail, chars)
+        }
+        case Fork(left, right, _, _) => {
+          val bit = subBits.head
+          if (bit == 0) {
+            decodeAcc(left, subBits.tail, chars)
+          } else if (bit == 1) {
+            decodeAcc(right, subBits.tail, chars)
+          } else {
+            throw new IllegalArgumentException
           }
         }
       }
     }
-    if (bits.isEmpty) {
-      throw new IllegalArgumentException
-    }
     tree match {
       // CodeTree with a single Leaf node, 0 or 1 map to the same char
-      case Leaf(char, _) => bits.map(bit => {
-        bit match {
-          case 0 => char
-          case 1 => char
-        }
-      })
+      case Leaf(char, _) => bits.map(bit => char)
       // CodeTree with more than 1 levels 
       case Fork(_, _, _, _) => decodeAcc(tree, bits, Nil).reverse
     }
@@ -212,36 +211,41 @@ object Huffman {
    * into a sequence of bits.
    */
   def encode(tree: CodeTree)(text: List[Char]): List[Bit] = {
-    def err(char: Char): Nothing = {
-      throw new RuntimeException(char + " not found")
-    }
 
-    def encodeAcc(subTree: CodeTree, text: List[Char], bits: List[Bit]): List[Bit] = {
-      if (text.isEmpty) {
-        bits
-      } else {
-        val textChar = text.head
-        subTree match {
-          case Leaf(char, _) =>
-            if (textChar == char) encodeAcc(tree, text.tail, 0 :: bits)
-            else err(textChar)
-          case Fork(Leaf(leftChar, _), Leaf(rightChar, _), _, _) =>
-            if (textChar == leftChar) encodeAcc(tree, text.tail, 0 :: bits)
-            else if (textChar == rightChar) encodeAcc(tree, text.tail, 1 :: bits)
-            else err(textChar)
-          case Fork(Leaf(char, _), right, _, _) =>
-            if (textChar == char) encodeAcc(tree, text.tail, 0 :: bits)
-            else encodeAcc(right, text, 1 :: bits)
-          case Fork(left, Leaf(char, _), _, _) =>
-            if (textChar == char) encodeAcc(tree, text.tail, 1 :: bits)
-            else encodeAcc(left, text, 0 :: bits)
-          case Fork(left: Fork, right: Fork, _, _) =>
-            if (left.chars.contains(textChar)) encodeAcc(left, text, 0 :: bits)
-            else encodeAcc(right, text, 1 :: bits)
+    def encodeAcc(subTree: CodeTree, subText: List[Char], bits: List[Bit]): List[Bit] = {
+      subTree match {
+        case Leaf(_, _) => {
+          if (subText.tail.isEmpty) {
+            bits
+          } else {
+            encodeAcc(tree, subText.tail, bits)
+          }
+        }
+        case Fork(left: Leaf, right, _, _) => {
+          if (left.char == subText.head) encodeAcc(left, subText, 0 :: bits)
+          else encodeAcc(right, subText, 1 :: bits)
+        }
+        case Fork(left, right: Leaf, _, _) => {
+          if (right.char == subText.head) encodeAcc(right, subText, 1 :: bits)
+          else encodeAcc(left, subText, 0 :: bits)
+        }
+        case Fork(left: Fork, right, _, _) => {
+          if (left.chars.contains(subText.head)) encodeAcc(left, subText, 0 :: bits)
+          else encodeAcc(right, subText, 1 :: bits)
+        }
+        case Fork(left, right: Fork, _, _) => {
+          if (right.chars.contains(subText.head)) encodeAcc(right, subText, 1 :: bits)
+          else encodeAcc(left, subText, 0 :: bits)
         }
       }
     }
-    encodeAcc(tree, text, Nil).reverse
+    tree match {
+      // CodeTree with a single Leaf node, char maps to 0
+      case Leaf(char, _) => text.map(char => 0)
+      // CodeTree with more than 1 levels 
+      case Fork(_, _, _, _) => encodeAcc(tree, text, Nil).reverse
+    }
+
   }
 
   // Part 4b: Encoding using code table
