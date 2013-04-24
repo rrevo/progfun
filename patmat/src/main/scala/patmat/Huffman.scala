@@ -211,41 +211,29 @@ object Huffman {
    * into a sequence of bits.
    */
   def encode(tree: CodeTree)(text: List[Char]): List[Bit] = {
-
-    def encodeAcc(subTree: CodeTree, subText: List[Char], bits: List[Bit]): List[Bit] = {
+    def encodeChar(subTree: CodeTree, char: Char, bits: List[Bit]): List[Bit] = {
       subTree match {
-        case Leaf(_, _) => {
-          if (subText.tail.isEmpty) {
-            bits
-          } else {
-            encodeAcc(tree, subText.tail, bits)
-          }
-        }
-        case Fork(left: Leaf, right, _, _) => {
-          if (left.char == subText.head) encodeAcc(left, subText, 0 :: bits)
-          else encodeAcc(right, subText, 1 :: bits)
-        }
-        case Fork(left, right: Leaf, _, _) => {
-          if (right.char == subText.head) encodeAcc(right, subText, 1 :: bits)
-          else encodeAcc(left, subText, 0 :: bits)
-        }
+        case Leaf(_, _) => bits
         case Fork(left: Fork, right, _, _) => {
-          if (left.chars.contains(subText.head)) encodeAcc(left, subText, 0 :: bits)
-          else encodeAcc(right, subText, 1 :: bits)
+          if (left.chars.contains(char)) encodeChar(left, char, 0 :: bits)
+          else encodeChar(right, char, 1 :: bits)
         }
         case Fork(left, right: Fork, _, _) => {
-          if (right.chars.contains(subText.head)) encodeAcc(right, subText, 1 :: bits)
-          else encodeAcc(left, subText, 0 :: bits)
+          if (right.chars.contains(char)) encodeChar(right, char, 1 :: bits)
+          else encodeChar(left, char, 0 :: bits)
+        }
+        case Fork(left: Leaf, right: Leaf, _, _) => {
+          if (left.char == char) encodeChar(left, char, 0 :: bits)
+          else encodeChar(right, char, 1 :: bits)
         }
       }
     }
     tree match {
-      // CodeTree with a single Leaf node, char maps to 0
-      case Leaf(char, _) => text.map(char => 0)
+      // CodeTree with a single Leaf node, 0 or 1 map to the same char
+      case Leaf(_, _) => text.map(char => 0)
       // CodeTree with more than 1 levels 
-      case Fork(_, _, _, _) => encodeAcc(tree, text, Nil).reverse
+      case Fork(_, _, _, _) => text.map(char => encodeChar(tree, char, Nil).reverse).flatten
     }
-
   }
 
   // Part 4b: Encoding using code table
