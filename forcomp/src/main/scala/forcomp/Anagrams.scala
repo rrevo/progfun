@@ -183,12 +183,16 @@ object Anagrams {
    * is other a subset of all
    */
   def occSubset(all: Occurrences, other: Occurrences): Boolean = {
-    val allMap = occurrencesAsMap(all)
-    other.foldLeft(true)((isSubSet: Boolean, occ: Occurrence) => isSubSet &&
-      (allMap.get(occ._1) match {
-        case Some(i) => i >= occ._2
-        case None => false
-      }))
+    if (other.length > all.length) {
+      false
+    } else {
+      val allMap = occurrencesAsMap(all)
+      other.foldLeft(true)((isSubSet: Boolean, occ: Occurrence) => isSubSet &&
+        (allMap.get(occ._1) match {
+          case Some(i) => i >= occ._2
+          case None => false
+        }))
+    }
   }
 
   def lengthOfOccurrence(occs: Occurrences): Int = {
@@ -197,16 +201,6 @@ object Anagrams {
 
   def lengthOfSentence(sentence: Sentence): Int = {
     sentence.foldLeft(0)((sum: Int, word: Word) => sum + word.length())
-  }
-
-  val cache = new scala.collection.mutable.HashMap[Occurrences, List[Sentence]]()
-
-  def anagramCache(occs: Occurrences): List[Sentence] = {
-    // Check if the occs is cached and if not then compute it
-    if (!cache.contains(occs)) {
-      cache.put(occs, anagrams(occs))
-    }
-    cache.get(occs).get
   }
 
   def anagrams(occs: Occurrences): List[Sentence] = {
@@ -231,7 +225,7 @@ object Anagrams {
           dictOcc = kv._1
           restOcc = subtract(occs, dictOcc)
         } yield {
-          dictOcc -> anagramCache(restOcc)
+          dictOcc -> anagrams(restOcc)
         }).toMap
 
       // Choose valid word/anagram combinations by checking length
