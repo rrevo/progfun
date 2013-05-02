@@ -163,7 +163,7 @@ class AnagramsSuite extends FunSuite {
     assert(sentenceAnagrams(sentence).toSet === anas.toSet)
   }
 
-  ignore("other sentences") {
+  test("other sentences") {
     sentenceAnagrams(List("Lukas", "Rytz"))
     sentenceAnagrams(List("Yell", "Xerxes"))
   }

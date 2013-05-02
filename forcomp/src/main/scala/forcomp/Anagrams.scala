@@ -199,6 +199,65 @@ object Anagrams {
     sentence.foldLeft(0)((sum: Int, word: Word) => sum + word.length())
   }
 
+  val cache = new scala.collection.mutable.HashMap[Occurrences, List[Sentence]]()
+
+  def anagramCache(occs: Occurrences): List[Sentence] = {
+    // Check if the occs is cached and if not then compute it
+    if (!cache.contains(occs)) {
+      cache.put(occs, anagrams(occs))
+    }
+    cache.get(occs).get
+  }
+
+  def anagrams(occs: Occurrences): List[Sentence] = {
+    if (occs.isEmpty) {
+      List(Nil)
+    } else {
+      val len = lengthOfOccurrence(occs)
+
+      // Get dictionary words that are a subset 
+      val subsetDictOccs: Map[Occurrences, List[Word]] = for {
+        kv <- dictionaryByOccurrences
+        dictOcc = kv._1
+        if occSubset(occs, dictOcc)
+      } yield {
+        dictOcc -> kv._2
+      }
+
+      // Get the anagrams for the remaining occs after the dictWord
+      val dictAnagrams: Map[Occurrences, List[Sentence]] = (
+        for {
+          kv <- subsetDictOccs
+          dictOcc = kv._1
+          restOcc = subtract(occs, dictOcc)
+        } yield {
+          dictOcc -> anagramCache(restOcc)
+        }).toMap
+
+      // Choose valid word/anagram combinations by checking length
+      val filteredDictAnagrams: Iterable[(Occurrences, Sentence)] =
+        for {
+          kv <- dictAnagrams
+          dictOcc = kv._1
+          dictWords: List[Word] = subsetDictOccs.get(kv._1).get
+          wordLen = dictWords.head.length()
+          restAnagram <- kv._2
+          if (lengthOfSentence(restAnagram) + wordLen) == len
+        } yield {
+          dictOcc -> restAnagram
+        }
+
+      // Get list of sentences that are valid by word*anagrams
+      val sentences: Iterable[Sentence] = for {
+        kv <- filteredDictAnagrams
+        dictWords: List[Word] = subsetDictOccs.get(kv._1).get
+        dictWord <- dictWords
+        filteredDictAnagram = kv._2
+      } yield dictWord :: filteredDictAnagram
+      sentences.toList
+    }
+  }
+
   /**
    * Returns a list of all anagram sentences of the given sentence.
    *
@@ -241,51 +300,6 @@ object Anagrams {
    *  Note: There is only one anagram of an empty sentence.
    */
   def sentenceAnagrams(sentence: Sentence): List[Sentence] = {
-
-    def anagrams(occs: Occurrences): List[Sentence] = {
-      if (occs.isEmpty) {
-        List(Nil)
-      } else {
-        val len = lengthOfOccurrence(occs)
-
-        // Eval this
-        dictionaryByOccurrences.size
-
-        // Map[Occurrences, List[Word]] from the dictionary that match 
-        val subsetDictOccs = for {
-          kv <- dictionaryByOccurrences
-          dictOcc = kv._1
-          if occSubset(occs, dictOcc)
-        } yield {
-          dictOcc -> kv._2
-        }
-
-        val dictAnagrams = for {
-          kv <- subsetDictOccs
-          dictOcc = kv._1
-          restOcc = subtract(occs, dictOcc)
-          restAnagrams: List[Sentence] = anagrams(restOcc)
-        } yield dictOcc -> restAnagrams
-
-        val filteredDictAnagrams = for {
-          kv <- dictAnagrams
-          dictOcc = kv._1
-          dictWords: List[Word] = subsetDictOccs.get(kv._1).get
-          wordLen = dictWords.head.length()
-          restAnagram <- kv._2
-          if (lengthOfSentence(restAnagram) + wordLen) == len
-        } yield dictOcc -> restAnagram
-
-        val sentences = for {
-          kv <- filteredDictAnagrams
-          dictWords: List[Word] = subsetDictOccs.get(kv._1).get
-          dictWord <- dictWords
-          filteredDictAnagram = kv._2
-        } yield dictWord :: filteredDictAnagram
-        sentences.toList
-      }
-    }
-
     anagrams(sentenceOccurrences(sentence))
   }
 
