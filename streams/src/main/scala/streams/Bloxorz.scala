@@ -10,17 +10,17 @@ object Bloxorz extends App {
    * the terrain to be valid at every position.
    */
   object InfiniteLevel extends Solver with InfiniteTerrain {
-    val startPos = Pos(1,3)
-    val goal = Pos(5,8)
+    val startPos = Pos(1, 3)
+    val goal = Pos(5, 8)
   }
-  
+
   println(InfiniteLevel.solution)
 
   /**
-   * A simple level constructed using the StringParserTerrain 
+   * A simple level constructed using the StringParserTerrain
    */
   abstract class Level extends Solver with StringParserTerrain
-  
+
   object Level0 extends Level {
     val level =
       """------
